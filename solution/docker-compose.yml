@@ -1,0 +1,44 @@
+services:
+  php-app:
+    build: ./php-app
+    ports:
+      - "8081:80"
+    environment:
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+    volumes:
+      # kod PHP montowany z hosta - zmiany widać bez przebudowania obrazu
+      - ./php-app/src:/var/www/html/src
+      - ./php-app/public:/var/www/html/public
+
+  # współdzielony storage metryk dla procesów PHP (PHP nie trzyma stanu między żądaniami)
+  redis:
+    image: redis:7-alpine
+
+  java-app:
+    build: ./java-app
+    ports:
+      - "8082:8080"
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-lifecycle
+      - --storage.tsdb.retention.time=1d
+    volumes:
+      - ./prometheus:/etc/prometheus
+
+  # generator ruchu - uruchamiany na żądanie: docker compose --profile load up -d loadgen
+  loadgen:
+    image: curlimages/curl:8.23.0
+    profiles: ["load"]
+    entrypoint: ["/bin/sh", "/load.sh"]
+    volumes:
+      - ./loadgen/load.sh:/load.sh:ro
+    environment:
+      ID_RANGE: ${ID_RANGE:-8}
+      LOOP_DELAY: ${LOOP_DELAY:-0.2}

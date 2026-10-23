@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: php-app
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["php-app:80"]
+        labels:
+          application: php-app
+          env: lab
+
+  - job_name: java-app
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["java-app:8080"]
